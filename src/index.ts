@@ -1,20 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
-
-export interface Env {
-	WEBSOCKET_HIBERNATION_SERVER: DurableObjectNamespace<WebSocketHibernationServer>;
-}
+import { CustomWebSocket } from "./interfaces/customWebsocket.interface";
 
 // Worker
 export default {
 	async fetch(
 		request: Request,
-		env: Env,
+		env: CustomWebSocket,
 		ctx: ExecutionContext,
 	): Promise<Response> {
 		if (request.url.endsWith("/websocket")) {
-			console.log("reaching here")
-			// Expect to receive a WebSocket Upgrade request.
-			// If there is one, accept the request and return a WebSocket Response.
 			const upgradeHeader = request.headers.get("Upgrade");
 			if (!upgradeHeader || upgradeHeader !== "websocket") {
 				return new Response("Durable Object expected Upgrade: websocket", {
@@ -57,7 +51,6 @@ export class WebSocketHibernationServer extends DurableObject {
 		// WebSocket receives a message, the runtime will recreate the Durable Object
 		// (run the `constructor`) and deliver the message to the appropriate handler.
 		this.ctx.acceptWebSocket(server);
-
 		return new Response(null, {
 			status: 101,
 			webSocket: client,
@@ -65,19 +58,17 @@ export class WebSocketHibernationServer extends DurableObject {
 	}
 
 	async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string) {
-		// Upon receiving a message from the client, the server replies with the same message,
-		// and the total number of connections with the "[Durable Object]: " prefix
 		ws.send(
 			`[Durable Object] message: ${message}, connections: ${this.ctx.getWebSockets().length}`,
 		);
 	}
-
 	async webSocketClose(
 		ws: WebSocket,
 		code: number,
 		reason: string,
 		wasClean: boolean,
 	) {
+		console.log("Connection closed....")
 		// If the client closes the connection, the runtime will invoke the webSocketClose() handler.
 		ws.close(code, "Durable Object is closing WebSocket");
 	}
