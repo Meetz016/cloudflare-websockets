@@ -1,11 +1,5 @@
-import { WebSocketHibernationServer } from "..";
-
-
-export interface Env {
-    WEBSOCKET_HIBERNATION_SERVER: DurableObjectNamespace<WebSocketHibernationServer>;
-}
-
-export interface CustomWebSocket extends Env {
+import { WebSocket, WebSocketServer } from "ws";
+export interface CustomWebSocket extends WebSocket {
     username: string,
     roomId: string,
 }

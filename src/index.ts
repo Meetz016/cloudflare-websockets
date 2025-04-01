@@ -1,11 +1,17 @@
 import { DurableObject } from "cloudflare:workers";
 import { CustomWebSocket } from "./interfaces/customWebsocket.interface";
-
+import { IUserInfo } from "./interfaces/user.interface";
+import { IRoomCreated, ISocketResponse } from "./interfaces/response";
+import { v4 as uuidv4 } from "uuid";
+const rooms = new Map<string, Set<WebSocket>>()
+export interface Env {
+	WEBSOCKET_HIBERNATION_SERVER: DurableObjectNamespace<WebSocketHibernationServer>;
+}
 // Worker
 export default {
 	async fetch(
 		request: Request,
-		env: CustomWebSocket,
+		env: Env,
 		ctx: ExecutionContext,
 	): Promise<Response> {
 		if (request.url.endsWith("/websocket")) {
@@ -58,6 +64,23 @@ export class WebSocketHibernationServer extends DurableObject {
 	}
 
 	async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string) {
+
+		const res: IUserInfo = JSON.parse(message.toString());
+		if (res.type == "create") {
+			//create a new room
+			const roomId = uuidv4().split("-")[0];
+			rooms.set(roomId, new Set([ws]));
+			console.log("RoomId is", roomId)
+			const response: ISocketResponse<IRoomCreated> = {
+				type: "roomCreated",
+				data: {
+					roomId: roomId
+				},
+				message: "Room Creation Sucessful"
+			}
+			ws.send(JSON.stringify(response));
+			return;
+		}
 		ws.send(
 			`[Durable Object] message: ${message}, connections: ${this.ctx.getWebSockets().length}`,
 		);
